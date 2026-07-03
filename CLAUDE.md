@@ -1,8 +1,44 @@
 # 学习总结模仿进步 — 项目说明
 
+> ⚠️ **接手项目后，第一件事：跑 `bash setup.sh`。否则你没法 push 到 GitHub。**
+
+## 环境初始化（必须做，否则后续全部白干）
+
+```bash
+cd "C:/Users/YZ/Desktop/学习总结模仿进步" && bash setup.sh
+```
+
+setup.sh 会自动完成：git init → 关联远程 → 配置 gh 凭证。
+如果提示未登录 GitHub，让用户执行 `! gh auth login --web`（用户名 3369499641-png），完成后再跑一次 setup.sh。
+
+验证环境就绪：
+```bash
+export PATH="$PATH:/c/Program Files/GitHub CLI"
+git push origin main --dry-run && echo "OK: 可以推送" || echo "FAIL: 推送不通"
+```
+
+**推送不通就用 API（不需 git push）：**
+```bash
+CONTENT=$(base64 -w0 文件路径)
+gh api repos/3369499641-png/learning-journal/contents/远程路径/文件名 \
+  -X PUT -f "message=commit说明" -f "content=$CONTENT" -f "branch=main"
+```
+推送后触发部署：`gh api repos/3369499641-png/learning-journal/pages/builds -X POST`
+
+网站地址：`https://3369499641-png.github.io/learning-journal/`
+
+---
+
 ## 项目定位
 
-用户的**长线学习系统**，用于每日积累、总结、模仿、进步。核心使用场景：用户会不定期发来投资圈子的聊天记录（王世辰圈子），需要你提取知识、归档、更新网页。
+用户的**长线学习系统**。核心场景：用户发来投资圈子聊天记录 → 你提取知识 → 更新 md + HTML → **push 到 GitHub → 网站自动更新**。
+
+你不是只能写本地文件。你能做的：
+- ✏️ 读写编辑文件（Write/Edit/Read）
+- 🔄 执行命令（Bash）
+- 🚀 **推送到 GitHub**（git push 或 API）→ 网站自动部署
+- 🌐 打开浏览器验证（`start "" "网址"`）
+- ☁️ 同步 OneDrive 备份
 
 ## 用户偏好
 
@@ -95,49 +131,13 @@
 ### 5. 同步 HTML
 **这是最关键的一步**。index.html 是用户实际阅读的界面，每次更新 md 后必须同步更新 HTML 中对应的 section。
 
-### 6. 部署到 GitHub Pages
-
-**如果你拿到的是 zip 包（不含 .git），必须先初始化 git：**
-
+### 6. 部署（环境已初始化后，日常只需这两步）
 ```bash
-# 第一步：进入项目目录
-cd "C:/Users/YZ/Desktop/学习总结模仿进步"
-
-# 第二步：初始化 git 并关联远程仓库
-git init
-git remote add origin https://github.com/3369499641-png/learning-journal.git
-git fetch origin main
-git checkout -b main origin/main
-
-# 第三步：确保 gh CLI 可用（需要先安装：winget install GitHub.cli）
-export PATH="$PATH:/c/Program Files/GitHub CLI"
-gh auth status
-# 如果未登录，运行 gh auth login --web
-
-# 如果 gh auth setup-git 还没跑过，先配置 git 凭证：
-gh auth setup-git
-
-# 第四步：正常提交流程
-git add -A
-git commit -m "feat: YYYY-MM-DD 交易日更新"
-git push origin main
+git add -A && git commit -m "feat: YYYY-MM-DD 交易日更新" && git push
 ```
-
-**如果 git push 超时（Windows 上常见），用 API 逐文件上传：**
-```bash
-# 读文件 → base64 → API PUT
-CONTENT=$(base64 -w0 要上传的文件)
-gh api repos/3369499641-png/learning-journal/contents/路径/文件名 \
-  -X PUT -f "message=commit消息" -f "content=$CONTENT" -f "branch=main"
-```
-
-推完后触发 Pages 重建：
-```bash
-gh api repos/3369499641-png/learning-journal/pages/builds -X POST
-```
-
-- GitHub Pages 网址：`https://3369499641-png.github.io/learning-journal/`
-- OneDrive 备份：`C:\Users\YZ\OneDrive\学习总结模仿进步/`
+推送失败就用 API（见顶部环境初始化章节）。推送后网站自动更新。
+- 网站：`https://3369499641-png.github.io/learning-journal/`
+- 备份：`cp -r ./* "$HOME/OneDrive/学习总结模仿进步/"`
 
 ## HTML 文件结构说明
 
