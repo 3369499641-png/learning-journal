@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学习总结模仿进步</title>
+<style>
+  :root{--bg:#fbf9f6;--text:#1a1816;--muted:#6b6560;--accent:#c41e3a;--border:#e6e0d8;--surface:#fff;--radius:8px;--font:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.7;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .container{max-width:640px;width:100%}
+  h1{font-size:2rem;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+  .sub{color:var(--muted);margin-bottom:40px;font-size:.95rem}
+  .cards{display:flex;flex-direction:column;gap:12px}
+  a.card{display:block;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;text-decoration:none;color:var(--text);transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+  a.card:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+  .card h3{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+  .card p{color:var(--muted);font-size:.85rem}
+  .card .badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.7rem;font-weight:600;margin-left:8px;background:#f3efe9;color:var(--muted)}
+  .footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);font-size:.78rem;color:var(--muted)}
+  .footer a{color:var(--accent)}
+  @media(max-width:480px){h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📚 学习总结模仿进步</h1>
+  <p class="sub">长线项目 — 每天积累一点点，持续迭代</p>
+
+  <div class="cards">
+    <a href="02_专题学习/投资/index.html" class="card">
+      <h3>📊 投资学习 <span class="badge">主力</span></h3>
+      <p>看盘框架 · 交易战法 · 个股案例库 · 心法与纪律</p>
+    </a>
+    <a href="01_每日记录/" class="card" style="opacity:.7">
+      <h3>📝 每日记录</h3>
+      <p>学习笔记、灵感、收获（建设中）</p>
+    </a>
+    <a href="04_复盘总结/" class="card" style="opacity:.5">
+      <h3>🔄 复盘总结</h3>
+      <p>周/月/季度回顾（待启动）</p>
+    </a>
+  </div>
+
+  <div class="footer">
+    最后更新 2025-07-02 · <a href="https://github.com">GitHub Pages</a>
+  </div>
+</div>
+</body>
+</html>

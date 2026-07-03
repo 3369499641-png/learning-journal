@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投资学习 · 看盘框架与交易体系</title>
+<style>
+  :root {
+    --bg: #fbf9f6;
+    --surface: #fff;
+    --text: #1a1816;
+    --text-muted: #6b6560;
+    --border: #e6e0d8;
+    --accent: #c41e3a;
+    --accent-dim: #8b1a2b;
+    --tag-bg: #f3efe9;
+    --code-bg: #f5f1ec;
+    --shadow: 0 1px 3px rgba(0,0,0,.04);
+    --radius: 6px;
+    --sidebar-w: 260px;
+    --font: "PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+    --mono: "SF Mono","Fira Code","Cascadia Code",Consolas,monospace;
+  }
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;font-size:16px}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.7;display:flex;min-height:100vh}
+
+  /* ── Sidebar ── */
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);
+    background:var(--surface);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;z-index:10;overflow-y:auto;
+  }
+  .sidebar-header{padding:24px 20px 16px;border-bottom:1px solid var(--border)}
+  .sidebar-header h2{font-size:1.1rem;font-weight:700;letter-spacing:-.01em}
+  .sidebar-header p{font-size:.78rem;color:var(--text-muted);margin-top:4px}
+  .sidebar-search{padding:12px 20px}
+  .sidebar-search input{
+    width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);
+    font-size:.82rem;font-family:var(--font);background:var(--bg);outline:none;
+    transition:border-color .15s;
+  }
+  .sidebar-search input:focus{border-color:var(--accent)}
+  .sidebar-nav{flex:1;padding:8px 0}
+  .sidebar-nav a{
+    display:block;padding:8px 20px;font-size:.85rem;color:var(--text-muted);
+    text-decoration:none;transition:all .12s;border-left:3px solid transparent;
+  }
+  .sidebar-nav a:hover,.sidebar-nav a.active{color:var(--text);background:#faf7f3;border-left-color:var(--accent)}
+  .sidebar-nav a small{display:block;font-size:.7rem;color:var(--text-muted)}
+  .sidebar-footer{padding:16px 20px;border-top:1px solid var(--border);font-size:.7rem;color:var(--text-muted)}
+
+  /* ── Main ── */
+  .main{margin-left:var(--sidebar-w);flex:1;max-width:820px;padding:40px 48px 80px}
+
+  h1{font-size:2rem;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;line-height:1.25}
+  h2{font-size:1.4rem;font-weight:700;margin:48px 0 16px;padding-top:24px;border-top:1px solid var(--border)}
+  h3{font-size:1.1rem;font-weight:700;margin:32px 0 12px;color:#2a2622}
+  h4{font-size:.95rem;font-weight:700;margin:20px 0 8px}
+
+  p{margin:10px 0}
+  a{color:var(--accent)}
+  ul,ol{padding-left:20px;margin:10px 0}
+  li{margin:5px 0}
+
+  /* ── Tables ── */
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.88rem}
+  th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
+  th{font-weight:700;background:var(--tag-bg);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+  tr:last-child td{border-bottom:none}
+
+  /* ── Code & pre ── */
+  pre,code{font-family:var(--mono);font-size:.82rem}
+  pre{
+    background:var(--code-bg);padding:16px 18px;border-radius:var(--radius);
+    overflow-x:auto;margin:14px 0;line-height:1.6;border:1px solid var(--border);
+  }
+  :not(pre)>code{
+    background:var(--tag-bg);padding:2px 6px;border-radius:3px;font-size:.8rem;
+  }
+
+  /* ── Blockquote ── */
+  blockquote{
+    margin:16px 0;padding:14px 18px;border-left:3px solid var(--accent);
+    background:var(--code-bg);border-radius:0 var(--radius) var(--radius) 0;
+    font-style:italic;color:#4a4440;
+  }
+  blockquote p{margin:4px 0}
+
+  /* ── Tags ── */
+  .tag{
+    display:inline-block;padding:2px 10px;background:var(--tag-bg);
+    border-radius:99px;font-size:.72rem;font-weight:600;margin:2px 4px 2px 0;
+    color:var(--text-muted);
+  }
+  .tag.buy{background:#d4edda;color:#155724}
+  .tag.sell{background:#f8d7da;color:#721c24}
+  .tag.warn{background:#fff3cd;color:#856404}
+
+  /* ── Cards ── */
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin:20px 0}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;box-shadow:var(--shadow);
+  }
+  .card h4{margin:0 0 8px}
+  .card p{font-size:.88rem;color:var(--text-muted);margin:0}
+
+  /* ── Steps ── */
+  .steps{counter-reset:step;list-style:none;padding:0}
+  .steps li{counter-increment:step;padding:10px 0 10px 40px;position:relative}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:10px;
+    width:26px;height:26px;border-radius:50%;background:var(--accent);
+    color:#fff;text-align:center;line-height:26px;font-size:.78rem;font-weight:700;
+  }
+
+  /* ── Highlight box ── */
+  .box{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:18px 20px;margin:16px 0;box-shadow:var(--shadow);
+  }
+  .box.accent{border-left:3px solid var(--accent)}
+
+  /* ── Hidden (search filter) ── */
+  .hidden{display:none!important}
+
+  /* ── Back to top ── */
+  .back-top{
+    position:fixed;bottom:24px;right:24px;width:40px;height:40px;
+    background:var(--surface);border:1px solid var(--border);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    box-shadow:var(--shadow);font-size:1.2rem;transition:all .15s;z-index:5;
+  }
+  .back-top:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* ── Mobile ── */
+  @media(max-width:768px){
+    body{flex-direction:column}
+    .sidebar{position:static;width:100%;border-right:none;border-bottom:1px solid var(--border);max-height:40vh}
+    .main{margin-left:0;padding:24px 16px 60px;max-width:100%}
+    h1{font-size:1.5rem}
+    .card-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h2>📊 投资学习</h2>
+    <p>王世辰圈子 · 看盘体系提炼</p>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="search" placeholder="搜索…" autocomplete="off">
+  </div>
+  <div class="sidebar-nav" id="nav-links">
+    <a href="#section-1" class="active">一、看盘框架 <small>竞价→开盘→盘中→收盘</small></a>
+    <a href="#section-2">二、交易战法 <small>11个核心技法</small></a>
+    <a href="#section-3">三、个股案例库 <small>9个实战案例</small></a>
+    <a href="#section-4">四、心法与纪律 <small>金句·纪律·成长路径</small></a>
+  </div>
+  <div class="sidebar-footer">最后更新 2025-07-01 · 持续迭代</div>
+</nav>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main class="main" id="main">
+
+<!-- ────────── SECTION 1 ────────── -->
+<section id="section-1">
+<h1>一、看盘框架</h1>
+<p style="color:var(--text-muted);font-size:.9rem">每日看盘完整流程：从盘前预案到收盘复盘</p>
+
+<h2>盘前预案（每天必做）</h2>
+
+<h3>1. 指数分析</h3>
+<ul>
+  <li>前一交易日收盘位置</li>
+  <li>关键支撑/压力位（两道线）</li>
+  <li>高开/低开/平开的不同含义</li>
+  <li>量能预期</li>
+</ul>
+
+<h3>2. 情绪指标</h3>
+<p>选几个代表性标的作为风向标：</p>
+<ul>
+  <li><strong>D头指标</strong>（多头代表）：看封单、溢价</li>
+  <li><strong>K头指标</strong>（空头代表）：看是否修复</li>
+</ul>
+<p>判断公式：D头强/弱 × K头强/弱 → 情绪偏暖/偏冷/弱平衡</p>
+
+<h3>3. 题材预判</h3>
+<ul>
+  <li>竞价最强方向是什么</li>
+  <li>科技与老登（传统板块）的博弈预判</li>
+  <li>核心票竞价金额排序</li>
+</ul>
+
+<h3>4. 个股预案</h3>
+<ul>
+  <li>持有个股的几种走势预案（强/中/弱）</li>
+  <li>新开仓条件</li>
+</ul>
+
+<h2>竞价阶段（9:15-9:25）</h2>
+
+<h3>核心判断链</h3>
+<pre>指数位置 → 情绪强弱 → 题材方向 → 个股应对</pre>
+
+<h3>开盘三问</h3>
+<ol>
+  <li><strong>指数开在什么位置？</strong>（支撑之上/之下/两道线之间）</li>
+  <li><strong>涨跌家数如何？</strong>（决定今天是抱团还是普涨）</li>
+  <li><strong>科技 vs 老登谁在动？</strong>（决定资金流向）</li>
+</ol>
+
+<h3>关键信号</h3>
+<ul>
+  <li><strong>高开</strong>：高开分歧是卖点</li>
+  <li><strong>低开</strong>：低开利于消化分歧，若指数修复，科技有望修复</li>
+  <li><strong>证券拉升</strong>：判断是"助攻"还是"背刺"</li>
+</ul>
+
+<h2>开盘阶段（9:30-10:00）</h2>
+
+<h3>科技开盘后的四种走法</h3>
+<table>
+  <tr><th>走法</th><th>应对</th></tr>
+  <tr><td>先修复</td><td>偏减仓点，防回落</td></tr>
+  <tr><td>先分歧</td><td>看水下低吸机会</td></tr>
+  <tr><td>直接走强</td><td>持股，不封板减</td></tr>
+  <tr><td>直接走弱</td><td>等修复，不割深水</td></tr>
+</table>
+
+<h3>老登与科技的博弈</h3>
+<pre>老登拉升 + 证券背刺 → 科技减仓
+老登投降 + 证券助攻 → 科技持股/加仓
+老登拉升 + 量能够 → 可能高低切
+老登高潮 → 科技可埋伏</pre>
+
+<h2>盘中阶段（10:00-14:30）</h2>
+
+<h3>10点早盘小结模板</h3>
+<ol>
+  <li><strong>指数</strong>：开盘位置 → 盘中走势 → 当前位置 → 今日定性</li>
+  <li><strong>情绪</strong>：竞价情绪 → 盘中变化 → 涨跌停/涨跌比</li>
+  <li><strong>题材</strong>：竞价方向 → 盘中轮动 → 当前主线</li>
+  <li><strong>个股</strong>：持有个股的状态和操作建议</li>
+</ol>
+
+<h3>盘中关键信号</h3>
+<ul>
+  <li><strong>涨跌家数变化</strong> — 最重要的实时指标</li>
+  <li>黄白线关系</li>
+  <li>证券板块动向</li>
+  <li>科技核心票动向</li>
+  <li>新题材异动</li>
+</ul>
+
+<h2>题材运行节奏</h2>
+<p>这是复盘中反复出现的核心框架：</p>
+<pre>分歧 → 修复 → 高潮 → 兑现 → 分歧 → ...</pre>
+
+<table>
+  <tr><th>阶段</th><th>操作</th></tr>
+  <tr><td>分歧（第一天）</td><td>核心票低吸，不追后排</td></tr>
+  <tr><td>修复</td><td>持股，不封板减</td></tr>
+  <tr><td>高潮</td><td><strong>纪律减仓</strong>，不追高</td></tr>
+  <tr><td>三连高潮</td><td>必须减仓，风险 > 机会</td></tr>
+  <tr><td>兑现/大分歧</td><td>深水不割，等修复再减</td></tr>
+</table>
+
+<div class="box accent">
+  <strong>判断口诀</strong>
+  <ul style="margin-top:8px">
+    <li>"高潮一定是减仓点"</li>
+    <li>"分歧是低吸核心的机会"</li>
+    <li>"科技分歧一般不超过2天，第三天修复概率大"</li>
+    <li>"连续高潮次日冲高容易回落"</li>
+  </ul>
+</div>
+
+<h2>分歧深度判断：一冰 / 二冰 / 三冰</h2>
+
+<p>科技连续分歧时的节奏：</p>
+<pre>第一次分歧（一冰）→ 第一时间低吸核心
+第二次分歧（二冰）→ 值得博弈，但偏左侧，控仓
+第三次分歧（三冰）→ 概率极低，如果出现是重仓机会</pre>
+
+<div class="box accent">
+  <strong>核心原则</strong>
+  <ul style="margin-top:8px">
+    <li>"科技分歧一般不超过2天，第三天修复概率大"</li>
+    <li>"今天低吸偏左侧，有不确定性；明天再分歧，就是不错的博弈点"</li>
+    <li>"科技三冰概率比较低"</li>
+  </ul>
+</div>
+
+<h2>左侧 vs 右侧交易</h2>
+
+<table>
+  <tr><th></th><th>左侧</th><th>右侧</th></tr>
+  <tr><td>特征</td><td>提前埋伏，不等确认</td><td>确认后再入场</td></tr>
+  <tr><td>优势</td><td>赔率高，成本低</td><td>确定性高</td></tr>
+  <tr><td>劣势</td><td>可能继续跌</td><td>成本高，利润空间小</td></tr>
+  <tr><td>适用</td><td>二冰博弈、超跌票</td><td>趋势确认、突破追入</td></tr>
+</table>
+
+<blockquote>"左侧有赔率但没有确定性，右侧有确定性但赔率就差一点"</blockquote>
+
+<h2>情绪兑现 vs 逻辑兑现</h2>
+
+<p>大跌时必须区分：是逻辑坏了，还是情绪宣泄？</p>
+
+<div class="box">
+  <strong>案例：7月2日 Meta 事件</strong><br>
+  Meta出租云算力 → 市场担心算力过剩 → 科技集体抛压<br><br>
+  <strong>但逻辑站不住脚：</strong><br>
+  · AI Token价格持续走高<br>
+  · 头部IDC算力租赁报价已回历史高位<br>
+  · 下游大厂仍在加价抢算力<br>
+  · Meta卖算力是因为自己大模型不行<br><br>
+  <strong>结论</strong>：这是<strong>情绪兑现</strong>，不是逻辑兑现。<br>
+  情绪兑现 → 深水是机会；逻辑兑现 → 必须离场。
+</div>
+
+<h2>收盘阶段</h2>
+<ul>
+  <li>今日操作复盘</li>
+  <li>知识点小结</li>
+  <li>明日预案初稿</li>
+</ul>
+
+<h2>看盘进阶：从数据到判断</h2>
+
+<h3>信息处理的层次</h3>
+<ol>
+  <li><strong>看到</strong>：指数点位、涨跌家数、板块涨跌</li>
+  <li><strong>判断</strong>：为什么涨/跌？谁在动？</li>
+  <li><strong>应对</strong>：基于判断的操作策略</li>
+  <li><strong>复盘</strong>：判断对不对？为什么？</li>
+</ol>
+
+<h3>经典判断链</h3>
+<pre>涨跌家数 4000 家下跌 + 老登没起来 + 量能够
+→ 资金没地方去
+→ 只能回流科技
+→ 科技深水是低吸机会</pre>
+</section>
+
+<!-- ────────── SECTION 2 ────────── -->
+<section id="section-2">
+<h1>二、交易战法</h1>
+<p style="color:var(--text-muted);font-size:.9rem">11 个核心技法，从选股到风控</p>
+
+<h2>1. 炸板六原则</h2>
+<p>用于判断炸板后的回封概率：</p>
+<pre>1. 炸板时净额是否流入（不是流出）
+2. 日K是否缩量（不是爆量）
+3. 题材是否还在延续
+4. 换手是否充分
+5. 板块是否有支撑
+6. 指数是否配合</pre>
+<div class="box">
+  <strong>经典案例：黄河旋风</strong><br>
+  炸板时净额流入 + 日K缩量 + 题材延续 → 良性分歧 → 回封
+</div>
+
+<h3>炸板补量要点</h3>
+<ul>
+  <li>一字板竞价尾声顶一字的 → 盘中分歧更大 → 等换手</li>
+  <li>"换手到前高 70% 以上（经验值）"→ 安全区间</li>
+  <li>"要么要确定性，要么要日内赔率"</li>
+</ul>
+
+<h2>2. 789 减仓法</h2>
+<p>高潮不封板的纪律性减仓：</p>
+<pre>科技高潮时，手里票 7%、8%、9% 又不封板 → 减仓
+因为高潮都不封板，板块回落时它回落的概率大</pre>
+<p><strong>20cm 票</strong>：翻倍，14%-18% 不封板就减</p>
+
+<h2>3. 买点后置</h2>
+<pre>买点后置 = 等换手到前高 70% 以上
+→ 确定性买点（回封确认后）
+→ 日内赔率买点（深水低吸）</pre>
+
+<h2>4. 利润垫策略</h2>
+
+<h3>核心理念</h3>
+<ul>
+  <li>买入后第一时间做利润垫</li>
+  <li>利润垫 = 减仓收回成本，留利润博弈</li>
+  <li>"利润垫够了就躺好"</li>
+</ul>
+
+<h3>操作步骤</h3>
+<ol>
+  <li>买入后，拉升减仓 → 收回部分成本</li>
+  <li>剩余仓位全是利润 → 心态稳</li>
+  <li>5 日线不破就拿着</li>
+  <li>新高附近减仓做倒 T</li>
+</ol>
+
+<table>
+  <tr><th>利润垫厚度</th><th>策略</th></tr>
+  <tr><td>&lt; 10%</td><td>谨慎，随时准备减</td></tr>
+  <tr><td>10% – 30%</td><td>5 日线防守</td></tr>
+  <tr><td>30% – 50%</td><td>可以格局，等新高</td></tr>
+  <tr><td>&gt; 50%</td><td>躺平，新高减即可</td></tr>
+</table>
+
+<h2>5. 高位看金额，低位看量</h2>
+<pre>高位：只有绝对金额才能承接得住
+低位：看量能变化，放量 + 止跌 = 底部信号</pre>
+
+<h3>爆量模型</h3>
+<ul>
+  <li>爆量不跌 = 可能是吃货量</li>
+  <li>爆量 + 反包 = 趋势预期</li>
+  <li>爆量 + 下跌 = 出货</li>
+</ul>
+
+<h2>6. 涨跌家数判断法</h2>
+<p>这是最重要的盘中指标之一：</p>
+<pre>上涨家数 &lt; 1000  → 极度冰点 → 资金抱团科技/主线
+上涨家数 1000-2000 → 偏弱 → 科技有回流预期
+上涨家数 2000-3000 → 平衡 → 看方向
+上涨家数 &gt; 3000  → 普涨 → 老登可能参与
+上涨家数 &gt; 4000  → 高潮 → 减仓信号</pre>
+
+<h2>7. 证券双面判断</h2>
+<pre>证券拉升 + 黄线跳水 + 老登拉升 = 背刺科技 → 减科技
+证券拉升 + 黄线不跳 + 老登不动 = 助攻科技 → 持股
+证券拉升 + 指数超强 + 量能够   = 可能带起科技 → 观察</pre>
+
+<h2>8. 题材炒作节奏</h2>
+<pre>第一天：新题材启动 → 果断上车
+第二天：分化 → 核心票低吸
+第三天：回流 → 后排减仓
+第 N 天：高潮 → 全线减仓
+第 N+1 天：兑现 → 等止跌</pre>
+
+<table>
+  <tr><th></th><th>情绪票</th><th>逻辑票</th></tr>
+  <tr><td>持有周期</td><td>快进快出</td><td>趋势持有</td></tr>
+  <tr><td>回调应对</td><td>走弱即走</td><td>回调是埋伏机会</td></tr>
+  <tr><td>选股依据</td><td>涨停板、封单</td><td>产业逻辑、业绩</td></tr>
+</table>
+
+<h2>9. 隔夜单 / 竞价技巧</h2>
+<ul>
+  <li>竞价尾声顶一字的，盘中分歧会更大</li>
+  <li>关注竞价金额靠前的大票 — 它们决定科技整体方向</li>
+  <li>利好：隔夜涨停排队；利空：跌停排队；超预期就撤单</li>
+</ul>
+
+<h2>10. 均线与趋势防守</h2>
+<pre>5日线不破 → 持有
+跌破5日线 → 减仓
+跌破成本 → 先出来等止跌
+5日线上方、均线乖离大 → 防回落</pre>
+
+<h2>11. 中报/业绩炒作节奏</h2>
+<pre>中报前挖坑 → 低吸机会
+中报出来 + 前期没涨 → 容易修复
+中报出来 + 前期大涨过 → 容易兑现
+中报密集期前2周 → 是埋伏窗口
+7月15日前 → 最后窗口期，还有一次高潮机会</pre>
+
+<h2>12. 低位聊逻辑，高位看强度</h2>
+<pre>低位：重点看产业逻辑、业绩预期、估值空间
+高位：重点看盘口强度、资金态度、是否力竭
+高位大分歧 → 聊利润垫，不聊逻辑 → 弱了崩撤溜</pre>
+
+<h2>13. 大跌日低吸分类</h2>
+<p>不是所有深水票都能吸，按风险从低到高：</p>
+<pre>第一档（最安全）：前期跌过+快到支撑的核心票（如中际旭创、长飞光纤）
+第二档（可博弈）：超跌+基本面改善+平台止跌（如通鼎互联）
+第三档（有弹性）：逆势走强+被动开板（如方正科技）
+第四档（不能碰）：刚破位+没止跌的前排票（如兆易创新跌停日）</pre>
+</section>
+
+<!-- ────────── SECTION 3 ────────── -->
+<section id="section-3">
+<h1>三、个股案例库</h1>
+<p style="color:var(--text-muted);font-size:.9rem">9 个实战案例，按操作逻辑分类。格式：股票 → 逻辑 → 操作 → 经验</p>
+
+<div class="card-grid">
+
+<div class="card">
+  <h4>案例 1：黄河旋风</h4>
+  <p><span class="tag">6/21–6/23</span> <span class="tag">金刚石/散热</span> <span class="tag">炸板六原则</span></p>
+  <p><strong>逻辑</strong>：新题材第一天上车，炸板时净额流入+缩量+题材延续 → 6原则良性分歧</p>
+  <p><strong>操作</strong>：第一天炸板低吸 → 第二天加仓 → 利润垫做厚格局 → 题材走弱边打边撤</p>
+  <p style="margin-top:8px"><strong>经验</strong>：盘口强是上升期加分项，不是走弱时持有理由。题材弱了就要撤。</p>
+</div>
+
+<div class="card">
+  <h4>案例 2：金钼股份</h4>
+  <p><span class="tag">6/21–6/30</span> <span class="tag">金属/钼</span> <span class="tag">反包</span></p>
+  <p><strong>逻辑</strong>：波段底 + 回踩支撑有效</p>
+  <p><strong>操作</strong>："边起立边砸，利润垫做出来" → 5分K压力位过不去就减</p>
+  <p style="margin-top:8px"><strong>经验</strong>：大跌当天不抄底。反包需要量价配合。</p>
+</div>
+
+<div class="card">
+  <h4>案例 3：德明利</h4>
+  <p><span class="tag">6/12入场–6/30新高</span> <span class="tag">存储芯片</span> <span class="tag">中报</span> <span class="tag buy">7天30%</span></p>
+  <p><strong>逻辑</strong>：基于中报布局，存储产业逻辑支撑</p>
+  <p><strong>操作</strong>：6月12日附近低吸 → 利润垫50%+ → 中报前准备砸盘兑现</p>
+  <p style="margin-top:8px"><strong>经验</strong>：中报前新高猛涨→出中报易兑现；中报前兑现过→出中报易修复。</p>
+</div>
+
+<div class="card">
+  <h4>案例 4：英维克</h4>
+  <p><span class="tag">6/22一字–6/30</span> <span class="tag">液冷/散热</span> <span class="tag">财报分析</span></p>
+  <p><strong>逻辑</strong>：液冷中军，Q1扣成本Q2变利润 → 10000%增速预期</p>
+  <p><strong>操作</strong>："拿到出中报"，5日线不破持有</p>
+  <p style="margin-top:8px"><strong>经验</strong>：财报不只数字，要看背后操作空间。</p>
+</div>
+
+<div class="card">
+  <h4>案例 5：台基股份</h4>
+  <p><span class="tag">6/22异动–7/1</span> <span class="tag">功率半导体</span> <span class="tag">预期管理</span></p>
+  <p><strong>逻辑</strong>：低位刚启动，"今天尾盘或明天必须启动，再不启动就真弱了"</p>
+  <p><strong>操作</strong>：低吸 → 拉升做利润垫 → 不及预期边打边撤</p>
+  <p style="margin-top:8px"><strong>经验</strong>：对个股要有明确预期和时效。队友都涨了它还不动→是弱。</p>
+</div>
+
+<div class="card">
+  <h4>案例 6：宏景科技</h4>
+  <p><span class="tag">6/21–6/30</span> <span class="tag">算力</span> <span class="tag">中报</span></p>
+  <p><strong>逻辑</strong>：算力涨价 + 中报逻辑</p>
+  <p><strong>操作</strong>：埋伏半个月，上涨3-5天</p>
+  <p style="margin-top:8px"><strong>经验</strong>：趋势票需要耐心等待。</p>
+</div>
+
+<div class="card">
+  <h4>案例 7：深科技</h4>
+  <p><span class="tag">6/24–7/1</span> <span class="tag">低位补涨</span></p>
+  <p><strong>逻辑</strong>：涨了2倍，比其他票还属低位</p>
+  <p><strong>操作</strong>：科技修复时下杀等修复，不封板减仓</p>
+  <p style="margin-top:8px"><strong>经验</strong>：低位补涨票安全边际更高。</p>
+</div>
+
+<div class="card">
+  <h4>案例 8：北京君正</h4>
+  <p><span class="tag">6/21首提–6/24涨停</span> <span class="tag">存储补涨</span></p>
+  <p><strong>逻辑</strong>：其他存储涨幅已不低时的补涨标的</p>
+  <p><strong>操作</strong>：与深科技、太极实业同批关注</p>
+  <p style="margin-top:8px"><strong>经验</strong>：热点方向内部有轮动，补涨机会值得关注。</p>
+</div>
+
+<div class="card">
+  <h4>案例 9：多氟多</h4>
+  <p><span class="tag">6/25启动–7/1</span> <span class="tag">氢氟酸</span> <span class="tag">换手量</span></p>
+  <p><strong>逻辑</strong>：供货台积电三星，氢氟酸+电池反推</p>
+  <p><strong>操作</strong>：封板健康换手区间 60-80亿（前高109亿）→ 放量到100亿不健康</p>
+  <p style="margin-top:8px"><strong>经验</strong>：换手量可以精算，缩量太多/放量太大都不健康。</p>
+</div>
+
+<div class="card">
+  <h4>案例 10：通鼎互联</h4>
+  <p><span class="tag">7/2</span> <span class="tag">超跌反弹</span> <span class="tag">扭亏</span></p>
+  <p><strong>逻辑</strong>：扭亏为盈 + 短期超跌 + 平台处止跌</p>
+  <p><strong>操作</strong>：盘中低吸控仓。"后面下跌空间也没多少，等科技修复就容易解套"</p>
+  <p style="margin-top:8px"><strong>经验</strong>：超跌+支撑+基本面改善 = 左侧博弈安全垫更厚。</p>
+</div>
+
+<div class="card">
+  <h4>案例 11：方正科技</h4>
+  <p><span class="tag">7/2</span> <span class="tag">逆势</span> <span class="tag">被动开板</span></p>
+  <p><strong>逻辑</strong>：科技全线大跌日逆势走强，被恐慌情绪带开板</p>
+  <p><strong>操作</strong>：尾盘均线附近低吸。"明天若修复，它就能吃到一定溢价"</p>
+  <p style="margin-top:8px"><strong>经验</strong>：逆势票+被动开板（非主动走弱）= 修复日弹性更大。</p>
+</div>
+
+<div class="card">
+  <h4>案例 12：东方锆业</h4>
+  <p><span class="tag">7/2</span> <span class="tag">国产替代</span> <span class="tag">氧化锆</span></p>
+  <p><strong>逻辑</strong>：5N级高纯纳米氧化锆，日本断供，国产唯一供应商</p>
+  <p><strong>操作</strong>："不能无脑追，看趋势机会"</p>
+  <p style="margin-top:8px"><strong>经验</strong>：国产替代逻辑票等趋势走出来再参与，不追消息。</p>
+</div>
+
+</div>
+
+<h2>经验汇总</h2>
+
+<h3>关于买点</h3>
+<ol>
+  <li>大跌当天不抄底</li>
+  <li>买在分歧，卖在高潮</li>
+  <li>买点后置，等换手充分</li>
+  <li>深水割肉没性价比，等反弹</li>
+</ol>
+
+<h3>关于卖点</h3>
+<ol>
+  <li>高潮不封板 = 减仓点</li>
+  <li>三连高潮必须减</li>
+  <li>不及预期的票，边打边撤</li>
+  <li>利润垫做出来才有主动权</li>
+</ol>
+
+<h3>关于持股</h3>
+<ol>
+  <li>利润垫厚 → 5日线防守</li>
+  <li>逻辑没坏 → 可以等</li>
+  <li>题材走弱 → 不管利润垫多少都要考虑走</li>
+</ol>
+</section>
+
+<!-- ────────── SECTION 4 ────────── -->
+<section id="section-4">
+<h1>四、心法与纪律</h1>
+<p style="color:var(--text-muted);font-size:.9rem">投资心态 · 交易纪律 · 成长路径 · 金句集</p>
+
+<h2>核心心法</h2>
+
+<div class="box accent">
+  <strong>关于时间</strong>
+  <blockquote>"人们总是高估 3、5 个月的努力，低估 3、5 年的坚持"<br>"赵老哥也才 8 年一万倍"</blockquote>
+</div>
+
+<div class="box accent">
+  <strong>关于认知</strong>
+  <blockquote>"认知内的东西，用技术和逻辑去分析；认知外的东西，只能通过利润垫和仓位去防守"</blockquote>
+</div>
+
+<div class="box accent">
+  <strong>关于纪律</strong>
+  <blockquote>"任何时候，都要对纪律心存敬畏"<br>"现在是环境好，乱搞都能挣钱。过一段时间还这么操作，一问一个不吱声"</blockquote>
+</div>
+
+<div class="box accent">
+  <strong>关于成长</strong>
+  <blockquote>"交易的量不会让人成长，对每一笔交易的反思才会"</blockquote>
+</div>
+
+<h2>交易纪律</h2>
+
+<div class="card-grid">
+<div class="card">
+  <h4>🟢 买入纪律</h4>
+  <ul>
+    <li>不在高潮时追高</li>
+    <li>不在大跌当天抄底</li>
+    <li>不买杂毛，聚焦主线</li>
+    <li>先做利润垫，再谈格局</li>
+    <li>买点后置，等换手充分</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>🔴 卖出纪律</h4>
+  <ul>
+    <li>高潮不封板 → 减仓</li>
+    <li>三连高潮 → 必须减</li>
+    <li>跌破 5 日线 → 减仓</li>
+    <li>跌破成本 → 先出来等止跌</li>
+    <li>题材走弱 → 边打边撤</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>🟡 仓位纪律</h4>
+  <ul>
+    <li>不重仓单一方向</li>
+    <li>有仓位，但不能满仓</li>
+    <li>利润垫做出来再格局</li>
+    <li>控制仓位远比选股重要</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>🔵 盘中纪律</h4>
+  <ul>
+    <li>深水不割肉，等修复</li>
+    <li>高潮不追高，等回落</li>
+    <li>科技分歧不超过2天</li>
+    <li>不要"一山看着一山高"</li>
+  </ul>
+</div>
+</div>
+
+<h2>常见错误</h2>
+<table>
+  <tr><th>错误</th><th>后果</th><th>纠正</th></tr>
+  <tr><td>高潮追高</td><td>当天被套</td><td>等分歧再参与</td></tr>
+  <tr><td>深水割肉</td><td>割在最低点</td><td>等修复再减</td></tr>
+  <tr><td>三连高潮不卖</td><td>利润大幅回撤</td><td>纪律减仓</td></tr>
+  <tr><td>做杂毛</td><td>浪费行情</td><td>聚焦主线</td></tr>
+  <tr><td>频繁做 T</td><td>越做越亏</td><td>减少无效操作</td></tr>
+  <tr><td>一山看着一山高</td><td>追涨杀跌</td><td>拿住逻辑票</td></tr>
+</table>
+
+<h2>金句集</h2>
+<ol>
+  <li>"高潮一定是减仓点"</li>
+  <li>"分歧是低吸核心的机会"</li>
+  <li>"利润垫做出来，才有主动权"</li>
+  <li>"高位看金额，低位看量"</li>
+  <li>"涨跌家数对胃了"</li>
+  <li>"先修复，先分歧，对应后面的走势和应对策略是不一样的"</li>
+  <li>"大涨后的正常分歧，只能用利润垫和仓位管理去防守"</li>
+  <li>"科技高潮的时候，手里票 789 个点又不封板，就要减仓"</li>
+  <li>"老登高潮，科技就可以埋伏"</li>
+  <li>"不到黄河不死心" = 不等到黄河回本不走人</li>
+  <li>"金泪股份，因为减仓减早了，钼变成了泪"</li>
+  <li>"科技分歧不超过 2 天，第三天修复概率很大"</li>
+  <li>"在股市追求长期稳定盈利，按纪律来"</li>
+  <li>"买在分歧，卖在一致"</li>
+  <li>"左侧有赔率但没有确定性，右侧有确定性但赔率就差一点"</li>
+  <li>"低位聊逻辑，高位看强度，弱了崩撤溜"</li>
+  <li>"科技行情里，机会都是跌出来的"</li>
+  <li>"慢慢让自己拥有长久在股市里生存的能力，任何时候都不晚"</li>
+</ol>
+
+<h2>成长路径</h2>
+<ol class="steps">
+  <li><strong>看懂盘面</strong>：知道今天在发生什么</li>
+  <li><strong>用对战法</strong>：选对适合自己的 1-2 个战法做精</li>
+  <li><strong>管住手</strong>：不做杂毛，不乱追高</li>
+  <li><strong>控制回撤</strong>：高潮减仓就是控制回撤</li>
+  <li><strong>稳定盈利</strong>：每个月收红，复利</li>
+</ol>
+
+<blockquote style="margin-top:32px">
+  "市场情绪炒作这种风格在慢慢演变……更多的是看产业逻辑，看个股基本面，就是大局观。首先大局观必须得对题材有足够的预期，才能知道题材的持续性，以这个作为基础，再结合战法。而且战法不需要用那么多，只需要用自己用着最舒服的那一种，做精就行。还有就是行情好的时候，千万不要觉得自己行了，要敬畏市场。"
+  <br><small>— 太阳兄弟（群友总结）</small>
+</blockquote>
+</section>
+
+</main>
+
+<!-- Back to top -->
+<div class="back-top" id="back-top" title="回到顶部">↑</div>
+
+<script>
+  // ── Active nav on scroll ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.sidebar-nav a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const id = e.target.id;
+        const link = document.querySelector(`.sidebar-nav a[href="#${id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  // ── Smooth scroll ──
+  navLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      document.querySelector(a.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  // ── Search ──
+  const search = document.getElementById('search');
+  search.addEventListener('input', () => {
+    const q = search.value.toLowerCase().trim();
+    const all = document.querySelectorAll('section[id]');
+    const cards = document.querySelectorAll('.card');
+    const rows = document.querySelectorAll('tr');
+    const lis = document.querySelectorAll('li,p,h2,h3,h4,pre,blockquote');
+
+    if (!q) {
+      // Reset all
+      document.querySelectorAll('.hidden').forEach(el => el.classList.remove('hidden'));
+      all.forEach(s => s.style.display = '');
+      return;
+    }
+
+    // Show/hide sections
+    all.forEach(s => {
+      const hasMatch = s.textContent.toLowerCase().includes(q);
+      s.style.display = hasMatch ? '' : 'none';
+    });
+
+    // Highlight in visible sections — simplify: just ensure parents visible
+    document.querySelectorAll('.card, tr').forEach(el => {
+      if (el.textContent.toLowerCase().includes(q)) {
+        el.closest('section').style.display = '';
+      }
+    });
+  });
+
+  // ── Back to top ──
+  const backTop = document.getElementById('back-top');
+  backTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  window.addEventListener('scroll', () => {
+    backTop.style.opacity = window.scrollY > 600 ? '1' : '0';
+    backTop.style.pointerEvents = window.scrollY > 600 ? 'auto' : 'none';
+  });
+  backTop.style.opacity = '0';
+  backTop.style.pointerEvents = 'none';
+  backTop.style.transition = 'opacity .2s';
+</script>
+
+</body>
+</html>
